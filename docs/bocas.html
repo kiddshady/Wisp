@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bocas de Wisp</title>
+<style>
+  :root { --bg: #0e0f13; --panel: #16181e; --line: #262a34; --text: #e6e8ee; --muted: #8a90a0; --accent: #b9b6e6; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  body { padding: 28px 16px 40px; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+  p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border-radius: 10px; padding: 12px; box-shadow: 0 6px 20px #0006; }
+  .card.actual { opacity: .7; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 6px; background: radial-gradient(circle at 50% 60%, #1d2029, #14161b 70%); }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row canvas { width: 50%; }
+  b { display: block; font-size: 14px; font-weight: 600; margin: 10px 0 2px; }
+  span { font-size: 12px; color: var(--muted); line-height: 1.4; }
+</style>
+</head>
+<body>
+  <h1>La boca de Wisp cuando está feliz</h1>
+  <p class="sub">Arriba, festejando. Abajo, quieto y ampliado, para ver los píxeles.</p>
+  <div class="grid" id="grid"></div>
+
+<script>
+const PAL = { o: '#2a2140', w: '#eef0ff', s: '#b9b6e6', e: '#2a2140', h: '#ffffff', b: '#f39ac0', g: '#ffe48a' };
+const TOP = [
+  '.....oooooo.....', '...oowwwwwwoo...', '..owwwwwwwwwwo..', '.owwwwwwwwwwwwo.', '.owwwwwwwwwwwso.',
+  'owwwwwwwwwwwwwso', 'owwwwwwwwwwwwwso', 'owwwwwwwwwwwwwso', 'owwwwwwwwwwwwwso', 'owwwwwwwwwwwwwso',
+  'owwwwwwwwwwwwsso', 'owwwwwwwwwwwwsso',
+];
+const SKIRT = [['owwwoowwwwoowsso', '.ooo..oooo..ooo.'], ['owwwwoowwwwoosso', '.oooo..oooo..oo.']];
+const EYES = { 5: '_____e____e_____', 6: '____e_e__e_e____' };
+
+// Cada opción: las filas 8 a 10 de la cara (los cachetes van en las columnas 3 y 12)
+const OPTIONS = [
+  { name: 'La de ahora', note: 'Tres arriba y uno abajo: se lee como una T, y corrida medio píxel a la izquierda.', actual: true,
+    rows: { 8: '___b__eee___b___', 9: '_______e________' } },
+  { name: '1 · Sonrisita', note: 'Una U chiquita y centrada. Tierna y simple.',
+    rows: { 8: '___b__e__e__b___', 9: '_______ee_______' } },
+  { name: '2 · Sonrisa ancha', note: 'La misma U pero más grande: más contento.',
+    rows: { 8: '___b_e____e_b___', 9: '______eeee______' } },
+  { name: '3 · Boca abierta', note: 'Riéndose, con la lengüita rosa adentro.',
+    rows: { 8: '___b__eeee__b___', 9: '______ebbe______', 10: '_______ee_______' } },
+  { name: '4 · Boquita de gato', note: 'Una w chiquita, estilo kawaii.',
+    rows: { 8: '___b_e_ee_e_b___', 9: '______e__e______' } },
+  { name: '5 · Sin boca', note: 'Solo los ojitos y los cachetes.',
+    rows: { 8: '___b________b___' } },
+];
+
+const SPOTS = [[1, 8], [22, 6], [2, 17], [21, 16], [19, 1], [4, 2]];
+
+function px(ctx, c, x, y) { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); }
+
+function draw(ctx, opt, t, still) {
+  ctx.clearRect(0, 0, 24, 24);
+  const phase = (t * 1.6) % 1;
+  const y = still ? 0 : -Math.round(Math.sin(phase * Math.PI) * 5);
+  const skirt = still ? 0 : Math.floor(t * 6) % 2;
+  const sh = 5 + Math.round(y / 2.5);
+  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  ctx.fillRect(12 - sh, 21, sh * 2, 1);
+  ctx.fillRect(12 - sh + 1, 22, sh * 2 - 2, 1);
+  const ox = 4, oy = 6 + y;
+  TOP.concat(SKIRT[skirt]).forEach((r, j) => { for (let i = 0; i < 16; i++) if (r[i] !== '.') px(ctx, PAL[r[i]], ox + i, oy + j); });
+  const face = { ...EYES, ...opt.rows };
+  for (const k in face) for (let i = 0; i < 16; i++) if (face[k][i] !== '_') px(ctx, PAL[face[k][i]], ox + i, oy + Number(k));
+  if (!still) SPOTS.forEach(([sx, sy], i) => {
+    const v = (t * 3 + i * 0.37) % 1;
+    if (v >= 0.75) return;
+    px(ctx, PAL.g, sx, sy);
+    if (v < 0.5) { px(ctx, PAL.g, sx - 1, sy); px(ctx, PAL.g, sx + 1, sy); px(ctx, PAL.g, sx, sy - 1); px(ctx, PAL.g, sx, sy + 1); }
+  });
+}
+
+const grid = document.getElementById('grid');
+const live = [];
+OPTIONS.forEach(opt => {
+  const card = document.createElement('div');
+  card.className = 'card' + (opt.actual ? ' actual' : '');
+  const anim = document.createElement('canvas'); anim.width = anim.height = 24;
+  const row = document.createElement('div'); row.className = 'row';
+  const still = document.createElement('canvas'); still.width = still.height = 24;
+  // Recorte de la cara, más grande
+  const zoom = document.createElement('canvas'); zoom.width = 12; zoom.height = 8;
+  row.append(still, zoom);
+  const b = document.createElement('b'); b.textContent = opt.name;
+  const s = document.createElement('span'); s.textContent = opt.note;
+  card.append(anim, row, b, s);
+  grid.append(card);
+  draw(still.getContext('2d'), opt, 0, true);
+  zoom.getContext('2d').drawImage(still, 6, 10, 12, 8, 0, 0, 12, 8);
+  zoom.style.aspectRatio = '12 / 8';
+  zoom.style.alignSelf = 'center';
+  live.push([anim.getContext('2d'), opt]);
+});
+
+requestAnimationFrame(function loop(now) {
+  live.forEach(([ctx, opt]) => draw(ctx, opt, now / 1000, false));
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>
