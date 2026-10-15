@@ -50,14 +50,17 @@ function checkOver() {
   setOver(alpha > 200);
 }
 wisp.on('cursor', (c) => { cursor = c; checkOver(); });
-window.addEventListener('click', () => {
-  wisp.dbg(`click over=${over}`);
-  if (over) wisp.poke();
+// Se reacciona al soltar el botón y no al evento click. Después de un rato, a esta ventana
+// (que no toma el foco) le dejan de llegar los mousedown: solo llega el mouseup, y sin los
+// dos Chromium nunca arma un click. Lo mostró debug.log el 15/10/2026, con la manito puesta.
+window.addEventListener('pointerdown', (e) => wisp.dbg(`down btn=${e.button} over=${over}`));
+window.addEventListener('pointerup', (e) => {
+  wisp.dbg(`up btn=${e.button} over=${over}`);
+  if (!over) return;
+  if (e.button === 0) wisp.poke();
+  else if (e.button === 2) wisp.menu();
 });
-window.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  if (over) wisp.menu();
-});
+window.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // El próximo cuadro se pide primero: si un dibujo falla, la animación sigue viva
 requestAnimationFrame(function loop(now) {

@@ -199,8 +199,8 @@ function buildMenu() {
 }
 
 ipcMain.on('hit', (_e, over) => {
-  dbg('hit', over);
   if (win) win.setIgnoreMouseEvents(!over);
+  dbg('hit', over, DEBUG && win32 && win ? JSON.stringify(win32.exStyle(win32.handleOf(win))) : '');
 });
 ipcMain.on('poke', () => {
   dbg('poke');
@@ -210,7 +210,10 @@ ipcMain.on('poke', () => {
 // El menú sale por la bandeja aunque lo pidas desde Wisp: la ventana de Wisp no puede tomar
 // el foco, y un menú colgado de ella no se cierra al hacer clic afuera. La bandeja sí.
 ipcMain.on('dbg', (_e, msg) => dbg('renderer', msg));
-ipcMain.on('menu', () => tray.popUpContextMenu(buildMenu(), screen.getCursorScreenPoint()));
+ipcMain.on('menu', () => {
+  dbg('menu');
+  tray.popUpContextMenu(buildMenu(), screen.getCursorScreenPoint());
+});
 
 app.on('second-instance', () => send('state', { name: 'celebrate', ms: 1400 }));
 app.on('window-all-closed', () => app.quit());

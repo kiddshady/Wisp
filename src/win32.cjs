@@ -12,6 +12,7 @@ const GetForegroundWindow = user32.func('intptr_t __stdcall GetForegroundWindow(
 const GetWindowRect = user32.func('bool __stdcall GetWindowRect(intptr_t hWnd, _Out_ RECT *lpRect)');
 const IsIconic = user32.func('bool __stdcall IsIconic(intptr_t hWnd)');
 const IsWindowVisible = user32.func('bool __stdcall IsWindowVisible(intptr_t hWnd)');
+const GetWindowLongW = user32.func('long __stdcall GetWindowLongW(intptr_t hWnd, int nIndex)');
 const GetClassNameW = user32.func('int __stdcall GetClassNameW(intptr_t hWnd, void *lpClassName, int nMaxCount)');
 const GetWindowThreadProcessId = user32.func('uint32_t __stdcall GetWindowThreadProcessId(intptr_t hWnd, _Out_ uint32_t *lpdwProcessId)');
 const DwmGetWindowAttribute = dwmapi.func('long __stdcall DwmGetWindowAttribute(intptr_t hwnd, uint32_t dwAttribute, _Out_ RECT *pvAttribute, uint32_t cbAttribute)');
@@ -60,4 +61,10 @@ function handleOf(browserWindow) {
   return Number(browserWindow.getNativeWindowHandle().readBigUInt64LE(0));
 }
 
-module.exports = { foreground, handleOf };
+// Para el registro de depuración: si la ventana está dejando pasar el mouse de verdad
+function exStyle(hwnd) {
+  const ex = GetWindowLongW(hwnd, -20) >>> 0;
+  return { transparent: !!(ex & 0x20), layered: !!(ex & 0x80000), noactivate: !!(ex & 0x8000000), topmost: !!(ex & 0x8) };
+}
+
+module.exports = { foreground, handleOf, exStyle };
