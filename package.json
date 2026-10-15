@@ -1,7 +1,7 @@
 {
   "name": "wisp",
   "productName": "Wisp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Mascota de escritorio en pixel art: un fantasmita que vive arriba de la ventana enfocada.",
   "main": "main.cjs",
   "author": "Kidd Shady",
