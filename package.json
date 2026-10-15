@@ -1,0 +1,82 @@
+{
+  "name": "wisp",
+  "productName": "Wisp",
+  "version": "0.2.0",
+  "description": "Mascota de escritorio en pixel art: un fantasmita que vive arriba de la ventana enfocada.",
+  "main": "main.cjs",
+  "author": "Kidd Shady",
+  "copyright": "© 2026 Kidd Shady · Umbrovex Systems",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "icons": "node tools/icons.cjs",
+    "build": "electron-builder --win --publish never",
+    "release": "node tools/release.mjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "koffi": "^3.3.3"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "homepage": "https://github.com/kiddshady/Wisp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kiddshady/Wisp.git"
+  },
+  "build": {
+    "appId": "com.umbrovex.wisp",
+    "productName": "Wisp",
+    "copyright": "© 2026 Kidd Shady · Umbrovex Systems",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "src/**/*",
+      "renderer/**/*",
+      "build/icon.ico",
+      "build/tray.ico",
+      "package.json",
+      "!docs/**",
+      "!tools/**"
+    ],
+    "npmRebuild": false,
+    "asarUnpack": [
+      "**/node_modules/@koromix/**"
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "shortcutName": "Wisp",
+      "uninstallDisplayName": "Wisp",
+      "artifactName": "Wisp-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "kiddshady",
+        "repo": "Wisp",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

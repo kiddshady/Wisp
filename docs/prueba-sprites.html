@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasmita sprites</title>
+<style>
+  :root {
+    --bg: #0e0f13; --panel: #16181e; --panel2: #1c1f27; --line: #262a34;
+    --text: #e6e8ee; --muted: #8a90a0; --accent: #b9b6e6;
+    --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+  body { padding: 32px 16px 48px; max-width: 1040px; margin: 0 auto; }
+  ::selection { background: #b9b6e655; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 36px 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; line-height: 1.5; }
+  .bar { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .bar span { color: var(--muted); font-size: 12px; margin-right: 4px; }
+  button {
+    font: inherit; font-size: 12px; color: var(--text); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; outline: none;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, opacity .18s ease;
+  }
+  button:hover { background: #232733; }
+  button:focus-visible { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--accent); }
+  button[aria-pressed="true"] { border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .45; cursor: default; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; box-shadow: 0 6px 20px #0006; }
+  .card canvas {
+    display: block; width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 6px;
+    background: radial-gradient(circle at 50% 60%, #1d2029, #14161b 70%);
+  }
+  .card b { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 2px; }
+  .card p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  code { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+
+  .stage {
+    position: relative; height: 340px; margin-top: 12px; overflow: hidden;
+    background: linear-gradient(#12141a, #0f1116); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .win {
+    position: absolute; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 10px 30px #0008; cursor: pointer; overflow: hidden;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .win.focus { border-color: #3a3f4f; box-shadow: 0 14px 40px #000a, 0 0 0 1px #b9b6e633; }
+  .win .tb {
+    height: 26px; border-bottom: 1px solid var(--line); display: flex; align-items: center;
+    padding: 0 10px; font-size: 11px; color: var(--muted); font-family: var(--mono);
+  }
+  .win .body { padding: 10px; font-family: var(--mono); font-size: 11px; color: #9aa1b2; white-space: pre; line-height: 1.6; }
+  .win .line { height: 6px; border-radius: 3px; background: #2a2e3a; margin: 8px 0; }
+  #winA { left: 4%; top: 120px; width: 44%; height: 190px; }
+  #winB { left: 54%; top: 80px; width: 42%; height: 220px; }
+  #ghost {
+    position: absolute; width: 96px; height: 96px; image-rendering: pixelated; pointer-events: none;
+    transition: left .7s cubic-bezier(.4, 0, .2, 1), top .7s cubic-bezier(.4, 0, .2, 1);
+  }
+</style>
+</head>
+<body>
+  <h1>Fantasmita de la terminal</h1>
+  <p class="sub">Prueba de sprites: lienzo de 24 × 24 píxeles, el fantasma ocupa 16 × 14. Todo se dibuja píxel por píxel, sin imágenes.</p>
+
+  <div class="bar" id="palettes">
+    <span>Paleta</span>
+    <button data-pal="clasico" aria-pressed="true">Clásico</button>
+    <button data-pal="menta">Menta</button>
+    <button data-pal="noche">Noche</button>
+  </div>
+
+  <div class="grid">
+    <div class="card"><canvas width="24" height="24" data-state="idle"></canvas><b>Flotando</b><p>Parpadea y mira para los costados.</p></div>
+    <div class="card"><canvas width="24" height="24" data-state="waiting"></canvas><b>Esperando</b><p>Mientras corre un comando largo.</p></div>
+    <div class="card"><canvas width="24" height="24" data-state="celebrate"></canvas><b>Festejo</b><p>El comando terminó con <code>exit 0</code>.</p></div>
+    <div class="card"><canvas width="24" height="24" data-state="scared"></canvas><b>Susto</b><p>El comando falló con <code>exit 1</code>.</p></div>
+    <div class="card"><canvas width="24" height="24" data-state="sleep"></canvas><b>Durmiendo</b><p>Pasó un rato sin actividad.</p></div>
+  </div>
+
+  <h2>Escena de prueba</h2>
+  <p class="sub">Hacé clic en una ventana y el fantasmita se muda arriba de ella. Si lo dejás quieto 10 segundos, se duerme.</p>
+  <div class="bar">
+    <button id="runOk">Comando que sale bien</button>
+    <button id="runFail">Comando que falla</button>
+  </div>
+  <div class="stage" id="stage">
+    <div class="win focus" id="winA"><div class="tb">NTX · pwsh</div><div class="body" id="term"></div></div>
+    <div class="win" id="winB"><div class="tb">notas.md</div><div class="body" style="white-space:normal">
+      <div class="line" style="width:70%"></div><div class="line" style="width:90%"></div>
+      <div class="line" style="width:55%"></div><div class="line" style="width:80%"></div>
+      <div class="line" style="width:40%"></div></div></div>
+    <canvas id="ghost" width="24" height="24"></canvas>
+  </div>
+
+<script>
+// ── Paletas ──────────────────────────────────────────────
+// o contorno · w cuerpo · s sombra · e ojos/boca · h brillo · b cachetes
+// d gota de sudor · g destellos · z puntitos y zetas
+const PALETTES = {
+  clasico: { o: '#2a2140', w: '#eef0ff', s: '#b9b6e6', e: '#2a2140', h: '#ffffff', b: '#f39ac0', d: '#8fd3ff', g: '#ffe48a', z: '#b9b6e6' },
+  menta:   { o: '#10302a', w: '#e6fff6', s: '#8fdcc0', e: '#10302a', h: '#ffffff', b: '#ff9fb3', d: '#8fd3ff', g: '#ffe48a', z: '#8fdcc0' },
+  noche:   { o: '#07080e', w: '#3b3f63', s: '#272a48', e: '#ffd36b', h: '#fff6d6', b: '#ff7aa8', d: '#8fd3ff', g: '#ffe48a', z: '#8a90c8' },
+};
+let PAL = PALETTES.clasico;
+
+// ── Cuerpo (16 de ancho) ─────────────────────────────────
+const TOP = [
+  '.....oooooo.....',
+  '...oowwwwwwoo...',
+  '..owwwwwwwwwwo..',
+  '.owwwwwwwwwwwwo.',
+  '.owwwwwwwwwwwso.',
+  'owwwwwwwwwwwwwso',
+  'owwwwwwwwwwwwwso',
+  'owwwwwwwwwwwwwso',
+  'owwwwwwwwwwwwwso',
+  'owwwwwwwwwwwwwso',
+  'owwwwwwwwwwwwsso',
+  'owwwwwwwwwwwwsso',
+];
+// La colita ondula entre dos cuadros
+const SKIRT = [
+  ['owwwoowwwwoowsso', '.ooo..oooo..ooo.'],
+  ['owwwwoowwwwoosso', '.oooo..oooo..oo.'],
+];
+
+// ── Caras: filas que se pintan encima del cuerpo (_ = no tocar) ──
+const FACES = {
+  idle:   { 5: '____he___he_____', 6: '____ee___ee_____', 7: '____ee___ee_____', 8: '___b_______b____' },
+  blink:  { 7: '____ee___ee_____', 8: '___b_______b____' },
+  wait:   { 4: '_____he___he____', 5: '_____ee___ee____', 6: '_____ee___ee____', 8: '___b_______b____', 9: '_______ee_______' },
+  happy:  { 5: '_____e____e_____', 6: '____e_e__e_e____', 8: '___b__eee___b___', 9: '_______e________' },
+  scared: { 3: '_____________d__', 4: '____ee___ee_dd__', 5: '____ee___ee_____', 6: '____ee___ee_____', 7: '____ee___ee_____',
+            9: '_____e_e_e______', 10: '______e_e_______' },
+  sleep:  { 7: '___eee___eee____', 8: '___b_______b____', 9: '_______e________' },
+};
+
+const ZBIG = ['zzzz', '..z.', '.z..', 'zzzz'];
+const ZSMALL = ['zzz', '.z.', 'zzz'];
+
+function px(ctx, color, x, y) { ctx.fillStyle = color; ctx.fillRect(x, y, 1, 1); }
+function stamp(ctx, color, rows, x, y) {
+  rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] !== '.') px(ctx, color, x + i, y + j); });
+}
+function sparkle(ctx, color, x, y, big) {
+  px(ctx, color, x, y);
+  if (big) { px(ctx, color, x - 1, y); px(ctx, color, x + 1, y); px(ctx, color, x, y - 1); px(ctx, color, x, y + 1); }
+}
+
+function drawGhost(ctx, pal, g) {
+  const ox = 4 + (g.x || 0), oy = 6 + (g.y || 0);
+  TOP.concat(SKIRT[g.skirt || 0]).forEach((r, j) => {
+    for (let i = 0; i < 16; i++) if (r[i] !== '.') px(ctx, pal[r[i]], ox + i, oy + j);
+  });
+  const f = FACES[g.face || 'idle'];
+  for (const k in f) {
+    const r = f[k];
+    for (let i = 0; i < 16; i++) if (r[i] !== '_') px(ctx, pal[r[i]], ox + i + (g.fdx || 0), oy + Number(k));
+  }
+}
+
+function shadow(ctx, cx, w) {
+  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  ctx.fillRect(cx - w, 21, w * 2, 1);
+  ctx.fillRect(cx - w + 1, 22, w * 2 - 2, 1);
+}
+
+// ── Estados: cada uno devuelve la pose para el tiempo t (segundos) ──
+const STATES = {
+  idle(t) {
+    const y = Math.round(Math.sin(t * 2.2) * 1.2);
+    const cyc = t % 6;
+    const fdx = cyc > 2.2 && cyc < 3.2 ? -1 : cyc > 4 && cyc < 5 ? 1 : 0;
+    return { y, skirt: Math.floor(t * 3) % 2, face: (t % 3.7) < 0.14 ? 'blink' : 'idle', fdx, shadow: y < 0 ? 4 : 5 };
+  },
+  waiting(t) {
+    const y = Math.round(Math.sin(t * 1.4));
+    return {
+      y, skirt: Math.floor(t * 2) % 2, face: 'wait', shadow: y < 0 ? 4 : 5,
+      fx(ctx, pal) { const n = Math.floor(t * 2.5) % 4; for (let i = 0; i < n; i++) px(ctx, pal.z, 15 + i * 2, 3 + y); },
+    };
+  },
+  celebrate(t) {
+    const phase = (t * 1.6) % 1;
+    const y = -Math.round(Math.sin(phase * Math.PI) * 5);
+    const spots = [[1, 8], [22, 6], [2, 17], [21, 16], [19, 1], [4, 2]];
+    return {
+      y, skirt: Math.floor(t * 6) % 2, face: 'happy', shadow: 5 + Math.round(y / 2.5),
+      fx(ctx, pal) {
+        spots.forEach(([sx, sy], i) => {
+          const v = (t * 3 + i * 0.37) % 1;
+          if (v < 0.75) sparkle(ctx, pal.g, sx, sy, v < 0.5);
+        });
+      },
+    };
+  },
+  scared(t) {
+    const shaking = (t % 1.2) < 0.7;
+    const x = shaking ? [0, 1, 0, -1][Math.floor(t * 20) % 4] : 0;
+    return {
+      x, skirt: Math.floor(t * 8) % 2, face: 'scared', shadow: 5,
+      fx(ctx, pal) { if (shaking) { for (let r = 1; r <= 3; r++) px(ctx, pal.b, 21, r); px(ctx, pal.b, 21, 5); } },
+    };
+  },
+  sleep(t) {
+    const y = Math.round(Math.sin(t * 1.2));
+    return {
+      y, skirt: Math.floor(t * 1.2) % 2, face: 'sleep', shadow: 5,
+      fx(ctx, pal) {
+        [0, 1].forEach(k => {
+          const p = (t * 0.45 + k * 0.5) % 1;
+          ctx.globalAlpha = p < 0.15 ? p / 0.15 : p > 0.8 ? (1 - p) / 0.2 : 1;
+          stamp(ctx, pal.z, k === 0 ? ZBIG : ZSMALL, 18 + Math.round(p * 2), 5 - Math.round(p * 5));
+        });
+        ctx.globalAlpha = 1;
+      },
+    };
+  },
+};
+
+function render(ctx, name, t) {
+  ctx.clearRect(0, 0, 24, 24);
+  const g = STATES[name](t);
+  shadow(ctx, 12 + (g.x || 0), g.shadow);
+  drawGhost(ctx, PAL, g);
+  if (g.fx) g.fx(ctx, PAL);
+}
+
+// ── Galería ──────────────────────────────────────────────
+const cards = [...document.querySelectorAll('.card canvas')].map(c => ({ ctx: c.getContext('2d'), state: c.dataset.state }));
+
+document.getElementById('palettes').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  PAL = PALETTES[b.dataset.pal];
+  document.querySelectorAll('#palettes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+
+// ── Escena ───────────────────────────────────────────────
+const ghost = document.getElementById('ghost');
+const gctx = ghost.getContext('2d');
+const wins = [...document.querySelectorAll('.win')];
+const term = document.getElementById('term');
+const runBtns = [document.getElementById('runOk'), document.getElementById('runFail')];
+const PROMPT = 'PS S:\\tools> ';
+term.textContent = PROMPT;
+
+let sceneState = 'idle', stateSince = performance.now(), lastAct = performance.now();
+let focused = wins[0], runToken = 0;
+
+function setState(s) { sceneState = s; stateSince = performance.now(); }
+function place() {
+  ghost.style.left = (focused.offsetLeft + focused.offsetWidth - 96 - 12) + 'px';
+  ghost.style.top = (focused.offsetTop - 80) + 'px';
+}
+function focusWin(w) {
+  focused = w;
+  wins.forEach(x => x.classList.toggle('focus', x === w));
+  place();
+}
+function wake() {
+  lastAct = performance.now();
+  if (sceneState === 'sleep') setState('idle');
+}
+
+wins.forEach(w => w.addEventListener('click', () => { wake(); focusWin(w); }));
+window.addEventListener('resize', place);
+
+function runCommand(ok) {
+  const token = ++runToken;
+  runBtns.forEach(b => b.disabled = true);
+  wake(); focusWin(wins[0]);
+  term.textContent = PROMPT + 'npm run build\n> compilando...';
+  setState('waiting');
+  setTimeout(() => {
+    if (token !== runToken) return;
+    term.textContent += ok ? '\nlisto en 2.6 s\n(exit 0)' : '\nerror: no encontré main.js\n(exit 1)';
+    setState(ok ? 'celebrate' : 'scared');
+    setTimeout(() => {
+      if (token !== runToken) return;
+      term.textContent += '\n' + PROMPT;
+      setState('idle'); lastAct = performance.now();
+      runBtns.forEach(b => b.disabled = false);
+    }, 2200);
+  }, 2600);
+}
+runBtns[0].addEventListener('click', () => runCommand(true));
+runBtns[1].addEventListener('click', () => runCommand(false));
+
+place();
+
+// ── Loop ────────────────────────────────────────────────
+function loop(now) {
+  const t = now / 1000;
+  cards.forEach(c => render(c.ctx, c.state, t));
+  if (sceneState === 'idle' && now - lastAct > 10000) setState('sleep');
+  render(gctx, sceneState, (now - stateSince) / 1000);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
