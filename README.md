@@ -11,6 +11,9 @@ npm run release  # compila, sube a GitHub (kiddshady/Wisp) y publica; las instal
 
 Antes de `npm run release`: `npm version <patch|minor>` y `git push origin main --follow-tags`.
 
+Con `WISP_DEBUG=1` en el entorno, Wisp anota en `%APPDATA%\Wisp\debug.log` lo que pasa con el
+cursor, los clics y los estados.
+
 ## Qué hace
 
 - Se sienta sobre la barra de título de la ventana enfocada y se desliza cuando cambiás de ventana.

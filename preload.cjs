@@ -1,7 +1,7 @@
 'use strict';
 const { contextBridge, ipcRenderer } = require('electron');
 
-const CHANNELS = ['state', 'sleep', 'move', 'visible'];
+const CHANNELS = ['state', 'sleep', 'move', 'visible', 'cursor'];
 
 contextBridge.exposeInMainWorld('wisp', {
   on(channel, fn) {
@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('wisp', {
   hit: (over) => ipcRenderer.send('hit', !!over),
   poke: () => ipcRenderer.send('poke'),
   menu: () => ipcRenderer.send('menu'),
+  dbg: (msg) => ipcRenderer.send('dbg', String(msg)),
 });

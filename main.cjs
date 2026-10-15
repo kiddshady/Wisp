@@ -1,5 +1,6 @@
 'use strict';
 const { app, BrowserWindow, Tray, Menu, screen, powerMonitor, ipcMain } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
 const ui = require('./src/ui-protocol.cjs');
 const updater = require('./src/updater.cjs');
@@ -42,7 +43,16 @@ let visible = true;
 let asleep = false;
 let still = false;
 
+// Con WISP_DEBUG=1 anota lo que pasa con el mouse y los estados en %APPDATA%\Wisp\debug.log
+const DEBUG = !!process.env.WISP_DEBUG;
+function dbg(...parts) {
+  if (!DEBUG) return;
+  const line = `${new Date().toISOString()} ${parts.join(' ')}\n`;
+  try { fs.appendFileSync(path.join(app.getPath('userData'), 'debug.log'), line); } catch {}
+}
+
 function send(channel, value) {
+  if (channel !== 'move' && channel !== 'cursor') dbg('send', channel, JSON.stringify(value));
   if (win && !win.isDestroyed()) win.webContents.send(channel, value);
 }
 
@@ -104,7 +114,7 @@ function setVisible(v) {
   if (v === visible) return;
   visible = v;
   send('visible', v);
-  if (!v) win.setIgnoreMouseEvents(true, { forward: true });
+  if (!v) win.setIgnoreMouseEvents(true);
 }
 
 // ── Seguir la ventana enfocada ───────────────────────────
@@ -130,6 +140,23 @@ function poll() {
   if (p.hide) return setVisible(false);
   setVisible(true);
   goTo(p);
+}
+
+// ── El cursor ────────────────────────────────────────────
+// La ventana deja pasar el mouse, así que no se entera sola de que el cursor está encima.
+// El reenvío de Electron (forward) depende de un gancho de mouse que en Windows no llega:
+// Wisp nunca veía el cursor y el clic pasaba de largo. Ahora main mira dónde está el
+// cursor y le pasa la posición al renderer, que decide si cae sobre un píxel del fantasma.
+let lastCursor = '';
+function trackCursor() {
+  if (!win || win.isDestroyed()) return;
+  const p = screen.getCursorScreenPoint();
+  const b = win.getBounds();
+  const inside = visible && p.x >= b.x && p.y >= b.y && p.x < b.x + b.width && p.y < b.y + b.height;
+  const key = inside ? `${p.x - b.x},${p.y - b.y}` : '';
+  if (key === lastCursor) return;
+  lastCursor = key;
+  send('cursor', inside ? { x: p.x - b.x, y: p.y - b.y } : null);
 }
 
 // ── Sueño ────────────────────────────────────────────────
@@ -172,14 +199,17 @@ function buildMenu() {
 }
 
 ipcMain.on('hit', (_e, over) => {
-  if (win) win.setIgnoreMouseEvents(!over, { forward: true });
+  dbg('hit', over);
+  if (win) win.setIgnoreMouseEvents(!over);
 });
 ipcMain.on('poke', () => {
+  dbg('poke');
   wake();
   send('state', { name: 'celebrate', ms: 1400 });
 });
 // El menú sale por la bandeja aunque lo pidas desde Wisp: la ventana de Wisp no puede tomar
 // el foco, y un menú colgado de ella no se cierra al hacer clic afuera. La bandeja sí.
+ipcMain.on('dbg', (_e, msg) => dbg('renderer', msg));
 ipcMain.on('menu', () => tray.popUpContextMenu(buildMenu(), screen.getCursorScreenPoint()));
 
 app.on('second-instance', () => send('state', { name: 'celebrate', ms: 1400 }));
@@ -204,12 +234,13 @@ app.whenReady().then(() => {
     },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
-  win.setIgnoreMouseEvents(true, { forward: true });
+  win.setIgnoreMouseEvents(true);
   win.loadURL(ui.uiUrl('index.html'));
   win.once('ready-to-show', () => {
     win.showInactive();
     setInterval(poll, POLL_MS);
     setInterval(checkIdle, 1000);
+    setInterval(trackCursor, 33);
   });
 
   tray = new Tray(path.join(__dirname, 'build', 'tray.ico'));

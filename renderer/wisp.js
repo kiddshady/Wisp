@@ -31,21 +31,29 @@ wisp.on('visible', (v) => {
   if (!v) setOver(false);
 });
 
-// La ventana deja pasar el mouse salvo sobre los píxeles del fantasma (la sombra no cuenta)
+// La ventana deja pasar el mouse salvo sobre los píxeles del fantasma (la sombra no cuenta).
+// main manda dónde está el cursor (relativo a la ventana, o null si está afuera); acá se mira
+// el píxel. Se vuelve a mirar en cada cuadro: si Wisp salta o se mueve, el cursor puede
+// quedar sobre aire aunque no se haya movido.
+let cursor = null;
+
 function setOver(v) {
   if (v === over) return;
   over = v;
   document.body.classList.toggle('over', v);
   wisp.hit(v);
 }
-window.addEventListener('mousemove', (e) => {
-  if (!shown) return;
-  const x = Math.floor(e.clientX / SCALE), y = Math.floor(e.clientY / SCALE);
+function checkOver() {
+  if (!shown || !cursor) return setOver(false);
+  const x = Math.floor(cursor.x / SCALE), y = Math.floor(cursor.y / SCALE);
   const alpha = x >= 0 && y >= 0 && x < 24 && y < 24 ? ctx.getImageData(x, y, 1, 1).data[3] : 0;
   setOver(alpha > 200);
+}
+wisp.on('cursor', (c) => { cursor = c; checkOver(); });
+window.addEventListener('click', () => {
+  wisp.dbg(`click over=${over}`);
+  if (over) wisp.poke();
 });
-document.addEventListener('mouseleave', () => setOver(false));
-window.addEventListener('click', () => { if (over) wisp.poke(); });
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   if (over) wisp.menu();
@@ -60,6 +68,7 @@ requestAnimationFrame(function loop(now) {
   } catch (err) {
     console.error('[wisp] no pude dibujar el cuadro:', err);
   }
+  if (cursor) checkOver();
 });
 
 // Entra con fundido: un cuadro con opacidad 0 y recién ahí se enciende
