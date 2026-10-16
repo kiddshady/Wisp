@@ -22,17 +22,17 @@ const SLEEP_AFTER_S = 60;
 const EASE = 0.16;            // cuánto del camino que falta recorre por cuadro
 
 const TESTS = [
-  ['Flotando', 'idle', 0],
-  ['Esperando', 'waiting', 4000],
-  ['Festejo', 'celebrate', 2200],
-  ['Susto', 'scared', 2200],
-  ['Durmiendo', 'sleep', 5000],
-  ['Te llama', 'calling', 4000],
+  ['Floating', 'idle', 0],
+  ['Working', 'waiting', 4000],
+  ['Celebrating', 'celebrate', 2200],
+  ['Scared', 'scared', 2200],
+  ['Sleeping', 'sleep', 5000],
+  ['Calling you', 'calling', 4000],
 ];
 
 // Lo que muestra Wisp según lo que hacen las sesiones de Claude Code (ver src/cc.cjs)
 const BASE_SPRITE = { idle: 'idle', working: 'waiting', needs: 'calling' };
-const ESTADO_CC = { idle: 'libre', working: 'trabajando', needs: 'te necesita' };
+const ESTADO_CC = { idle: 'idle', working: 'working', needs: 'needs you' };
 
 // `npm start` corre al lado del Wisp instalado: otro nombre (otro userData y otro candado de
 // instancia única) y, con WISP_PORT, otro puerto.
@@ -213,8 +213,8 @@ function ccItems() {
   const r = cc.resumen();
   const sesiones = r.activo ? r.sesiones : [];
   return [
-    { label: 'Reaccionar a Claude Code', type: 'checkbox', checked: r.activo, click: (item) => activarCC(item.checked) },
-    ...sesiones.map((s) => ({ label: `    ${s.nombre || 'sesión'}: ${ESTADO_CC[s.estado]}`, enabled: false })),
+    { label: 'React to Claude Code', type: 'checkbox', checked: r.activo, click: (item) => activarCC(item.checked) },
+    ...sesiones.map((s) => ({ label: `    ${s.nombre || 'session'}: ${ESTADO_CC[s.estado]}`, enabled: false })),
   ];
 }
 
@@ -228,15 +228,15 @@ function buildMenu() {
   const update = updater.readyVersion();
   return Menu.buildFromTemplate([
     { label: `Wisp ${app.getVersion()}`, enabled: false },
-    ...(update ? [{ label: `Actualizar ahora a la ${update}`, click: () => updater.installIfReady() }] : []),
+    ...(update ? [{ label: `Update now to ${update}`, click: () => updater.installIfReady() }] : []),
     { type: 'separator' },
     ...ccItems(),
     { type: 'separator' },
-    { label: 'Probar un estado', submenu: TESTS.map(([label, name, ms]) => ({ label, click: () => send('state', { name, ms }) })) },
-    { label: 'Quedarse quieto', type: 'checkbox', checked: still, click: (item) => { still = item.checked; if (!still) poll(); } },
-    { label: 'Iniciar con Windows', type: 'checkbox', checked: login.openAtLogin, click: (item) => app.setLoginItemSettings({ ...loginOpts(), openAtLogin: item.checked }) },
+    { label: 'Try a state', submenu: TESTS.map(([label, name, ms]) => ({ label, click: () => send('state', { name, ms }) })) },
+    { label: 'Stay still', type: 'checkbox', checked: still, click: (item) => { still = item.checked; if (!still) poll(); } },
+    { label: 'Start with Windows', type: 'checkbox', checked: login.openAtLogin, click: (item) => app.setLoginItemSettings({ ...loginOpts(), openAtLogin: item.checked }) },
     { type: 'separator' },
-    { label: 'Salir', click: () => app.quit() },
+    { label: 'Quit', click: () => app.quit() },
   ]);
 }
 
@@ -299,7 +299,7 @@ app.whenReady().then(() => {
       send('base', BASE_SPRITE[base]);
       if (base !== 'idle') wake();
       const llaman = cc ? cc.resumen().sesiones.filter((s) => s.estado === 'needs').map((s) => s.nombre) : [];
-      tray.setToolTip(base === 'needs' ? `Wisp · te necesita: ${llaman.join(', ')}` : 'Wisp');
+      tray.setToolTip(base === 'needs' ? `Wisp · needs you: ${llaman.join(', ')}` : 'Wisp');
     },
     alMomento: (name) => { wake(); send('state', { name, ms: 2200 }); },
   });

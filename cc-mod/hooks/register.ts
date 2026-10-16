@@ -18,10 +18,10 @@ const PREGUNTAS = new Set(['AskUserQuestion', 'ExitPlanMode'])
 const PERSONA = new Set(['composer', 'bridge', 'sdk'])
 
 const USO = [
-  'Uso:',
-  '  /wisp          cómo está la conexión con Wisp',
-  '  /wisp on       que Wisp reaccione a Claude Code',
-  '  /wisp off      que no reaccione (lo mismo que el tilde en su menú)',
+  'Usage:',
+  '  /wisp          show the connection with Wisp',
+  '  /wisp on       make Wisp react to Claude Code',
+  '  /wisp off      stop reacting (same as the checkbox in its menu)',
 ].join('\n')
 
 let estado: Estado = 'idle'
@@ -77,17 +77,17 @@ async function pedir($: EngineInterface, ruta: string, cuerpo?: unknown) {
   return JSON.parse(r.text) as { activo: boolean; sesiones?: { nombre: string; estado: Estado }[] }
 }
 
-const ESTADOS: Record<Estado, string> = { idle: 'libre', working: 'trabajando', needs: 'te necesita' }
+const ESTADOS: Record<Estado, string> = { idle: 'idle', working: 'working', needs: 'needs you' }
 
 function describir(r: { activo: boolean; sesiones?: { nombre: string; estado: Estado }[] }) {
-  if (!r.activo) return 'Wisp no reacciona a Claude Code. /wisp on lo prende.'
-  const lista = (r.sesiones ?? []).map(s => `  ${s.nombre || 'sesión'}: ${ESTADOS[s.estado] ?? s.estado}`)
-  return ['Wisp reacciona a Claude Code.', ...(lista.length ? ['Sesiones:', ...lista] : ['Ninguna sesión le avisó todavía.'])].join('\n')
+  if (!r.activo) return 'Wisp is not reacting to Claude Code. /wisp on turns it on.'
+  const lista = (r.sesiones ?? []).map(s => `  ${s.nombre || 'session'}: ${ESTADOS[s.estado] ?? s.estado}`)
+  return ['Wisp is reacting to Claude Code.', ...(lista.length ? ['Sessions:', ...lista] : ['No session has checked in yet.'])].join('\n')
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'wisp', description: 'Wisp reacciona a Claude Code: on, off o cómo está' })
+    await $.command.register({ name: 'wisp', description: 'Wisp reacts to Claude Code: on, off, or status' })
     latido?.cancel()
     latido = $.clock.every(LATIDO_MS, () => avisar($, estado))
     avisar($, 'idle')
@@ -133,7 +133,7 @@ export const register: Register = on => {
   on('command.run', { command: 'wisp' }, async ($, e) => {
     const origin = (e as { origin?: { kind: string } }).origin
     if (origin !== undefined && !PERSONA.has(origin.kind)) {
-      return { text: `wisp: lo maneja Fran desde la app (esto vino de "${origin.kind}").` }
+      return { text: `wisp: only the person at the keyboard can change this (this came from "${origin.kind}").` }
     }
     const verbo = (e.args ?? '').trim().toLowerCase()
     if (verbo !== '' && verbo !== 'on' && verbo !== 'off') return { text: USO }
@@ -142,7 +142,7 @@ export const register: Register = on => {
       if (verbo === 'on') avisar($, estado)
       return { text: describir(r) }
     } catch {
-      return { text: 'Wisp no está abierto (o es una versión sin la conexión con Claude Code, anterior a la 0.3.0).' }
+      return { text: 'Wisp is not open (or it is a version older than 0.3.0, without the Claude Code connection).' }
     }
   })
 }

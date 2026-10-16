@@ -2,7 +2,7 @@
   "name": "wisp",
   "productName": "Wisp",
   "version": "0.3.1",
-  "description": "Mascota de escritorio en pixel art: un fantasmita que vive arriba de la ventana enfocada.",
+  "description": "Pixel art desktop pet: a little ghost that lives on top of the focused window.",
   "main": "main.cjs",
   "author": "Kidd Shady",
   "copyright": "© 2026 Kidd Shady · Umbrovex Systems",
@@ -69,6 +69,8 @@
       "perMachine": false,
       "shortcutName": "Wisp",
       "uninstallDisplayName": "Wisp",
+      "installerLanguages": ["en_US"],
+      "language": "1033",
       "artifactName": "Wisp-Setup-${version}.${ext}"
     },
     "publish": [

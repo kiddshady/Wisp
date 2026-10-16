@@ -76,10 +76,10 @@ test('/wisp off lo apaga en Wisp, y /wisp sin nada cuenta cómo está', async ($
   const correr = (args: string) =>
     $.command.run({ command: 'wisp', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } } as never)
 
-  expect((await correr('off')).text).toContain('no reacciona')
+  expect((await correr('off')).text).toContain('not reacting')
   expect(pedidos.at(-1)).toEqual({ url: 'http://127.0.0.1:4790/cc/activo', body: '{"activo":false}' })
-  expect((await correr('')).text).toContain('Quire: te necesita')
-  expect((await correr('bailá')).text).toContain('Uso:')
+  expect((await correr('')).text).toContain('Quire: needs you')
+  expect((await correr('bailá')).text).toContain('Usage:')
 })
 
 test('si Wisp no está abierto, /wisp lo dice y nada se rompe', async ($, on) => {
@@ -89,6 +89,6 @@ test('si Wisp no está abierto, /wisp lo dice y nada se rompe', async ($, on) =>
     throw new Error('ECONNREFUSED')
   })
   const r = await $.command.run({ command: 'wisp', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } } as never)
-  expect(r.text).toContain('no está abierto')
+  expect(r.text).toContain('not open')
   await $.turn.start({ text: 'hola', turnId: 't1' })
 })

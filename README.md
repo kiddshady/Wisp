@@ -29,8 +29,8 @@ cursor, los clics y los estados.
 
 ## Estados
 
-`idle` (flotando), `waiting` (esperando), `celebrate` (festejo), `scared` (susto), `sleep` (durmiendo)
-y `calling` (te llama: saltitos y un «!»). Se prueban desde el menú, en «Probar un estado».
+`idle` (flotando), `waiting` (trabaja: los ojos leen de izquierda a derecha), `celebrate` (festejo), `scared` (susto), `sleep` (durmiendo)
+y `calling` (te llama: saltitos y un «!»). Se prueban desde el menú, en «Try a state».
 
 ## Claude Code
 
@@ -46,7 +46,7 @@ Cada sesión de Claude Code le avisa a Wisp qué está haciendo, con el mod de `
 Al terminar un turno de más de 20 s festeja, y si se corta o falla, se asusta. Una sesión que pasa
 150 s sin avisar (el mod repite su estado cada 60) se olvida, por si se cerró sin despedirse.
 
-- Se apaga y se prende con el tilde «Reaccionar a Claude Code» del menú, o desde Claude Code con
+- Se apaga y se prende con el tilde «React to Claude Code» del menú, o desde Claude Code con
   `/wisp off` y `/wisp on`; `/wisp` solo dice cómo está. El menú lista las sesiones que avisaron.
 - Para cargar el mod en todos los Claude Code de la máquina, `S:\tools\Wisp\cc-mod` va en
   `CLAUDE_CODE_PLUGIN_DIRS` (en el `env` de `~/.claude/settings.json`, separado con `;`).
