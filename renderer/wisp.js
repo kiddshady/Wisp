@@ -8,6 +8,10 @@ const SCALE = 4;
 let state = 'idle';
 let since = performance.now();
 let revert = 0;
+// El estado de fondo: al que vuelve después de un festejo o un susto. Es 'idle' salvo que
+// Claude Code esté trabajando ('waiting') o te necesite ('calling'); lo manda main.
+let base = 'idle';
+let momento = false;
 let dir = 0;
 let over = false;
 let shown = true;
@@ -16,13 +20,19 @@ function setState(name, ms) {
   state = name;
   since = performance.now();
   clearTimeout(revert);
-  if (ms) revert = setTimeout(() => setState('idle'), ms);
+  momento = !!ms;
+  if (ms) revert = setTimeout(() => setState(base), ms);
 }
 
 wisp.on('state', ({ name, ms }) => setState(name, ms));
+wisp.on('base', (name) => {
+  base = name;
+  // Un momento en curso termina solo y vuelve al fondo nuevo; dormido, sigue durmiendo.
+  if (!momento && state !== 'sleep' && state !== base) setState(base);
+});
 wisp.on('sleep', (asleep) => {
   if (asleep) setState('sleep');
-  else if (state === 'sleep') setState('idle');
+  else if (state === 'sleep') setState(base);
 });
 wisp.on('move', (d) => { dir = d; });
 wisp.on('visible', (v) => {
@@ -65,7 +75,7 @@ window.addEventListener('contextmenu', (e) => e.preventDefault());
 // El próximo cuadro se pide primero: si un dibujo falla, la animación sigue viva
 requestAnimationFrame(function loop(now) {
   requestAnimationFrame(loop);
-  const looking = dir && (state === 'idle' || state === 'waiting');
+  const looking = dir && (state === 'idle' || state === 'waiting' || state === 'calling');
   try {
     render(ctx, state, (now - since) / 1000, looking ? { fdx: dir } : null);
   } catch (err) {

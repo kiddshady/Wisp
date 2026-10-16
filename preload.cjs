@@ -1,7 +1,7 @@
 'use strict';
 const { contextBridge, ipcRenderer } = require('electron');
 
-const CHANNELS = ['state', 'sleep', 'move', 'visible', 'cursor'];
+const CHANNELS = ['state', 'base', 'sleep', 'move', 'visible', 'cursor'];
 
 contextBridge.exposeInMainWorld('wisp', {
   on(channel, fn) {

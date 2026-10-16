@@ -40,6 +40,8 @@
     scared: { 3: '_____________d__', 4: '____ee___ee_dd__', 5: '____ee___ee_____', 6: '____ee___ee_____', 7: '____ee___ee_____',
               9: '_____e_e_e______', 10: '______e_e_______' },
     sleep:  { 7: '___eee___eee____', 8: '___b_______b____', 9: '_______e________' },
+    call:   { 3: '____he___he_____', 4: '____ee___ee_____', 5: '____ee___ee_____', 8: '___b_______b____',
+              9: '_______ee_______', 10: '_______ee_______' },   // de frente, ojos arriba y boca abierta
   };
 
   const ZBIG = ['zzzz', '..z.', '.z..', 'zzzz'];
@@ -110,6 +112,19 @@
       return {
         x, skirt: frame(t, 8, 2), face: 'scared', shadow: 5,
         fx(ctx) { if (shaking) { for (let r = 1; r <= 3; r++) px(ctx, PALETTE.b, 21, r); px(ctx, PALETTE.b, 21, 5); } },
+      };
+    },
+    // Te llama: un saltito cada 1,4 s y un «!» que titila arriba, como en los RPG
+    calling(t) {
+      const p = t % 1.4;
+      const y = p < 0.5 ? -Math.round(Math.sin(p / 0.5 * Math.PI) * 3) : 0;
+      return {
+        y, skirt: frame(t, 4, 2), face: 'call', shadow: 5 + Math.round(y / 2),
+        fx(ctx) {
+          if (p > 1.15) return;
+          for (let r = 0; r < 4; r++) px(ctx, PALETTE.g, 21, 1 + r);
+          px(ctx, PALETTE.g, 21, 6);
+        },
       };
     },
     sleep(t) {

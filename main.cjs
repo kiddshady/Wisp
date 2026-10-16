@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ui = require('./src/ui-protocol.cjs');
 const updater = require('./src/updater.cjs');
+const ccMod = require('./src/cc.cjs');
 
 let win32 = null;
 try {
@@ -26,7 +27,17 @@ const TESTS = [
   ['Festejo', 'celebrate', 2200],
   ['Susto', 'scared', 2200],
   ['Durmiendo', 'sleep', 5000],
+  ['Te llama', 'calling', 4000],
 ];
+
+// Lo que muestra Wisp según lo que hacen las sesiones de Claude Code (ver src/cc.cjs)
+const BASE_SPRITE = { idle: 'idle', working: 'waiting', needs: 'calling' };
+const ESTADO_CC = { idle: 'libre', working: 'trabajando', needs: 'te necesita' };
+
+// `npm start` corre al lado del Wisp instalado: otro nombre (otro userData y otro candado de
+// instancia única) y, con WISP_PORT, otro puerto.
+if (!app.isPackaged) app.setName('Wisp Dev');
+const PUERTO = Number(process.env.WISP_PORT) || ccMod.PORT;
 
 const primary = app.requestSingleInstanceLock();
 if (!primary) app.quit();
@@ -42,6 +53,7 @@ let lastHwnd = 0;
 let visible = true;
 let asleep = false;
 let still = false;
+let cc = null;
 
 // Con WISP_DEBUG=1 anota lo que pasa con el mouse y los estados en %APPDATA%\Wisp\debug.log
 const DEBUG = !!process.env.WISP_DEBUG;
@@ -49,6 +61,16 @@ function dbg(...parts) {
   if (!DEBUG) return;
   const line = `${new Date().toISOString()} ${parts.join(' ')}\n`;
   try { fs.appendFileSync(path.join(app.getPath('userData'), 'debug.log'), line); } catch {}
+}
+
+// ── Ajustes (userData\config.json) ───────────────────────
+function configPath() { return path.join(app.getPath('userData'), 'config.json'); }
+function readConfig() {
+  try { return JSON.parse(fs.readFileSync(configPath(), 'utf8')); } catch { return {}; }
+}
+function writeConfig(cambios) {
+  try { fs.writeFileSync(configPath(), JSON.stringify({ ...readConfig(), ...cambios }, null, 2)); }
+  catch (err) { dbg('config', err.message); }
 }
 
 function send(channel, value) {
@@ -168,6 +190,10 @@ function wake() {
 
 function checkIdle() {
   const idle = powerMonitor.getSystemIdleTime();
+  // Mientras Claude Code trabaja o te necesita, Wisp se queda despierto mostrándolo
+  // (y la actualización espera: reiniciarse ahora le borraría la lista de sesiones).
+  if (cc) cc.recalcular();
+  if (cc && cc.base !== 'idle') return wake();
   if (!asleep && idle >= SLEEP_AFTER_S) {
     // Si hay una versión nueva bajada, se instala ahora que nadie está mirando
     if (updater.installIfReady()) return;
@@ -183,12 +209,28 @@ function loginOpts() {
   return app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] };
 }
 
+function ccItems() {
+  const r = cc.resumen();
+  const sesiones = r.activo ? r.sesiones : [];
+  return [
+    { label: 'Reaccionar a Claude Code', type: 'checkbox', checked: r.activo, click: (item) => activarCC(item.checked) },
+    ...sesiones.map((s) => ({ label: `    ${s.nombre || 'sesión'}: ${ESTADO_CC[s.estado]}`, enabled: false })),
+  ];
+}
+
+function activarCC(v) {
+  cc.encender(v);
+  writeConfig({ cc: v });
+}
+
 function buildMenu() {
   const login = app.getLoginItemSettings(loginOpts());
   const update = updater.readyVersion();
   return Menu.buildFromTemplate([
     { label: `Wisp ${app.getVersion()}`, enabled: false },
     ...(update ? [{ label: `Actualizar ahora a la ${update}`, click: () => updater.installIfReady() }] : []),
+    { type: 'separator' },
+    ...ccItems(),
     { type: 'separator' },
     { label: 'Probar un estado', submenu: TESTS.map(([label, name, ms]) => ({ label, click: () => send('state', { name, ms }) })) },
     { label: 'Quedarse quieto', type: 'checkbox', checked: still, click: (item) => { still = item.checked; if (!still) poll(); } },
@@ -239,6 +281,8 @@ app.whenReady().then(() => {
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setIgnoreMouseEvents(true);
   win.loadURL(ui.uiUrl('index.html'));
+  // Un aviso que llegó antes de que cargue la página se perdería: se repite al cargar.
+  win.webContents.on('did-finish-load', () => { if (cc) send('base', BASE_SPRITE[cc.base]); });
   win.once('ready-to-show', () => {
     win.showInactive();
     setInterval(poll, POLL_MS);
@@ -248,6 +292,18 @@ app.whenReady().then(() => {
 
   tray = new Tray(path.join(__dirname, 'build', 'tray.ico'));
   tray.setToolTip('Wisp');
+
+  cc = ccMod.crear({
+    activo: readConfig().cc !== false,
+    alCambiar: (base) => {
+      send('base', BASE_SPRITE[base]);
+      if (base !== 'idle') wake();
+      const llaman = cc ? cc.resumen().sesiones.filter((s) => s.estado === 'needs').map((s) => s.nombre) : [];
+      tray.setToolTip(base === 'needs' ? `Wisp · te necesita: ${llaman.join(', ')}` : 'Wisp');
+    },
+    alMomento: (name) => { wake(); send('state', { name, ms: 2200 }); },
+  });
+  ccMod.servir(cc, { puerto: PUERTO, alActivar: (v) => writeConfig({ cc: v }), log: dbg });
   const openMenu = () => tray.popUpContextMenu(buildMenu());
   tray.on('click', openMenu);
   tray.on('right-click', openMenu);

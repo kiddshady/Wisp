@@ -1,0 +1,5 @@
+{
+  "name": "wisp",
+  "version": "0.1.0",
+  "description": "Avisa a Wisp (la mascota de escritorio) cuándo Claude Code trabaja, te necesita o termina; /wisp on|off"
+}
