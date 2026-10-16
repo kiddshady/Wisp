@@ -35,13 +35,12 @@
   const FACES = {
     idle:   { 5: '____he___he_____', 6: '____ee___ee_____', 7: '____ee___ee_____', 8: '___b_______b____' },
     blink:  { 7: '____ee___ee_____', 8: '___b_______b____' },
-    wait:   { 4: '_____he___he____', 5: '_____ee___ee____', 6: '_____ee___ee____', 8: '___b_______b____', 9: '_______ee_______' },
+    wait:   { 5: '____he___he_____', 6: '____ee___ee_____', 7: '____ee___ee_____', 8: '___b_______b____' },   // ojos del idle, sin boca; leen con fdx
     happy:  { 5: '_____e____e_____', 6: '____e_e__e_e____', 8: '___b________b___' },   // sin boca: solo ^^ y cachetes
     scared: { 3: '_____________d__', 4: '____ee___ee_dd__', 5: '____ee___ee_____', 6: '____ee___ee_____', 7: '____ee___ee_____',
               9: '_____e_e_e______', 10: '______e_e_______' },
     sleep:  { 7: '___eee___eee____', 8: '___b_______b____', 9: '_______e________' },
-    call:   { 3: '____he___he_____', 4: '____ee___ee_____', 5: '____ee___ee_____', 8: '___b_______b____',
-              9: '_______ee_______', 10: '_______ee_______' },   // de frente, ojos arriba y boca abierta
+    call:   { 3: '____he___he_____', 4: '____ee___ee_____', 5: '____ee___ee_____', 6: '___b_______b____' },   // ojos arriba, sin boca
   };
 
   const ZBIG = ['zzzz', '..z.', '.z..', 'zzzz'];
@@ -85,10 +84,11 @@
       const fdx = cyc > 2.2 && cyc < 3.2 ? -1 : cyc > 4 && cyc < 5 ? 1 : 0;
       return { y, skirt: frame(t, 3, 2), face: (t % 3.7) < 0.14 ? 'blink' : 'idle', fdx, shadow: y < 0 ? 4 : 5 };
     },
+    // Trabaja: los ojos recorren de izquierda a derecha y vuelven, como leyendo renglones
     waiting(t) {
       const y = Math.round(Math.sin(t * 1.4));
       return {
-        y, skirt: frame(t, 2, 2), face: 'wait', shadow: y < 0 ? 4 : 5,
+        y, skirt: frame(t, 2, 2), face: 'wait', fdx: [-1, 0, 1][frame(t, 1.6, 3)], shadow: y < 0 ? 4 : 5,
         fx(ctx) { const n = frame(t, 2.5, 4); for (let i = 0; i < n; i++) px(ctx, PALETTE.z, 15 + i * 2, 3 + y); },
       };
     },
