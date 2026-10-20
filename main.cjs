@@ -5,6 +5,7 @@ const path = require('node:path');
 const ui = require('./src/ui-protocol.cjs');
 const updater = require('./src/updater.cjs');
 const ccMod = require('./src/cc.cjs');
+const glider = require('./src/glide.cjs');
 
 let win32 = null;
 try {
@@ -19,7 +20,6 @@ const PERCH_Y = 20 * SCALE;   // así la sombra (renglones 21-22) cae sobre la b
 const PERCH_RIGHT = 120;      // distancia al borde derecho, lejos de minimizar/maximizar/cerrar
 const POLL_MS = 80;
 const SLEEP_AFTER_S = 60;
-const EASE = 0.16;            // cuánto del camino que falta recorre por cuadro
 
 const TESTS = [
   ['Floating', 'idle', 0],
@@ -45,9 +45,9 @@ else ui.registerScheme();
 
 let win = null;
 let tray = null;
-let pos = null;
-let goal = null;
-let mover = null;
+let glide = null;      // el viaje de Wisp (src/glide.cjs)
+let moving = false;
+let lastStep = 0;
 let lastDir = 0;
 let lastHwnd = 0;
 let visible = true;
@@ -74,7 +74,7 @@ function writeConfig(cambios) {
 }
 
 function send(channel, value) {
-  if (channel !== 'move' && channel !== 'cursor') dbg('send', channel, JSON.stringify(value));
+  if (channel !== 'move' && channel !== 'cursor' && channel !== 'moving') dbg('send', channel, JSON.stringify(value));
   if (win && !win.isDestroyed()) win.webContents.send(channel, value);
 }
 
@@ -100,8 +100,15 @@ function perchFor(physRect) {
 }
 
 // ── Movimiento ───────────────────────────────────────────
+// El reloj lo marca la pantalla: mientras Wisp viaja, el renderer avisa en cada cuadro
+// (requestAnimationFrame) y main da un paso. Antes era un setInterval de 16 ms, que en
+// Windows late cada ~31 ms porque el reloj del sistema va de a 15,6 ms: medido el
+// 20/10/2026, Wisp viajaba a 32 cuadros por segundo en un monitor de 75 Hz.
 function place() {
-  win.setBounds({ x: Math.round(pos.x), y: Math.round(pos.y), width: SIZE, height: SIZE });
+  win.setPosition(Math.round(glide.pos.x), Math.round(glide.pos.y));
+  // setPosition entre monitores con distinta escala puede cambiarle el tamaño a la ventana
+  const [w, h] = win.getSize();
+  if (w !== SIZE || h !== SIZE) win.setSize(SIZE, SIZE);
 }
 
 function setDir(d) {
@@ -111,25 +118,28 @@ function setDir(d) {
 }
 
 function step() {
-  const dx = goal.x - pos.x, dy = goal.y - pos.y;
-  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
-    pos = { ...goal };
-    place();
-    clearInterval(mover);
-    mover = null;
-    setDir(0);
-    return;
-  }
-  pos.x += dx * EASE;
-  pos.y += dy * EASE;
+  if (!moving) return;
+  const now = performance.now();
+  const dt = (now - lastStep) / 1000;
+  lastStep = now;
+  const dx = glide.goal.x - glide.pos.x;
   if (Math.abs(dx) > 6) setDir(Math.sign(dx));
+  const llego = glide.step(dt);
   place();
+  if (!llego) return;
+  moving = false;
+  send('moving', false);
+  setDir(0);
 }
 
 function goTo(p) {
-  if (goal && Math.abs(goal.x - p.x) < 1 && Math.abs(goal.y - p.y) < 1) return;
-  goal = { x: p.x, y: p.y };
-  if (!mover) mover = setInterval(step, 16);
+  const g = glide.goal;
+  if (Math.abs(g.x - p.x) < 1 && Math.abs(g.y - p.y) < 1) return;
+  glide.setGoal(p);
+  if (moving) return;
+  moving = true;
+  lastStep = performance.now();
+  send('moving', true);
 }
 
 function setVisible(v) {
@@ -252,6 +262,7 @@ ipcMain.on('poke', () => {
 // El menú sale por la bandeja aunque lo pidas desde Wisp: la ventana de Wisp no puede tomar
 // el foco, y un menú colgado de ella no se cierra al hacer clic afuera. La bandeja sí.
 ipcMain.on('dbg', (_e, msg) => dbg('renderer', msg));
+ipcMain.on('frame', step);
 ipcMain.on('menu', () => {
   dbg('menu');
   tray.popUpContextMenu(buildMenu(), screen.getCursorScreenPoint());
@@ -263,8 +274,8 @@ app.on('window-all-closed', () => app.quit());
 app.whenReady().then(() => {
   if (!primary) return;
   ui.serve();
-  pos = cornerOf(screen.getPrimaryDisplay());
-  goal = { ...pos };
+  const pos = cornerOf(screen.getPrimaryDisplay());
+  glide = glider.crear(pos);
 
   win = new BrowserWindow({
     x: pos.x, y: pos.y, width: SIZE, height: SIZE,
@@ -282,12 +293,17 @@ app.whenReady().then(() => {
   win.setIgnoreMouseEvents(true);
   win.loadURL(ui.uiUrl('index.html'));
   // Un aviso que llegó antes de que cargue la página se perdería: se repite al cargar.
-  win.webContents.on('did-finish-load', () => { if (cc) send('base', BASE_SPRITE[cc.base]); });
+  win.webContents.on('did-finish-load', () => {
+    if (cc) send('base', BASE_SPRITE[cc.base]);
+    if (moving) send('moving', true);
+  });
   win.once('ready-to-show', () => {
     win.showInactive();
     setInterval(poll, POLL_MS);
     setInterval(checkIdle, 1000);
     setInterval(trackCursor, 33);
+    // Plazo de red: si la página deja de pintar (pantalla apagada), el viaje sigue igual
+    setInterval(() => { if (moving && performance.now() - lastStep > 60) step(); }, 50);
   });
 
   tray = new Tray(path.join(__dirname, 'build', 'tray.ico'));

@@ -9,7 +9,7 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node test/cc.test.cjs",
+    "test": "node test/cc.test.cjs && node test/glide.test.cjs",
     "icons": "node tools/icons.cjs",
     "build": "electron-builder --win --publish never",
     "release": "node tools/release.mjs"

@@ -4,7 +4,7 @@ Mascota de escritorio en pixel art: un fantasmita que vive arriba de la ventana 
 
 ```bash
 npm start        # correr en desarrollo
-npm test         # la conexión con Claude Code (src/cc.cjs), sin Electron
+npm test         # la conexión con Claude Code (src/cc.cjs) y el viaje (src/glide.cjs), sin Electron
 npm run icons    # regenerar build/icon.png, icon.ico y tray.ico desde los sprites
 npm run build    # instalador en dist/Wisp-Setup-<versión>.exe
 npm run release  # compila, sube a GitHub (kiddshady/Wisp) y publica; las instalaciones se actualizan solas

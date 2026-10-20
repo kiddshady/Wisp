@@ -13,6 +13,8 @@ let revert = 0;
 let base = 'idle';
 let momento = false;
 let dir = 0;
+// Mientras Wisp viaja, cada cuadro le avisa a main para que dé un paso (ver main.cjs)
+let moving = false;
 let over = false;
 let shown = true;
 
@@ -35,6 +37,7 @@ wisp.on('sleep', (asleep) => {
   else if (state === 'sleep') setState(base);
 });
 wisp.on('move', (d) => { dir = d; });
+wisp.on('moving', (v) => { moving = v; });
 wisp.on('visible', (v) => {
   shown = v;
   document.body.classList.toggle('on', v);
@@ -75,6 +78,7 @@ window.addEventListener('contextmenu', (e) => e.preventDefault());
 // El próximo cuadro se pide primero: si un dibujo falla, la animación sigue viva
 requestAnimationFrame(function loop(now) {
   requestAnimationFrame(loop);
+  if (moving) wisp.frame();
   const looking = dir && (state === 'idle' || state === 'waiting' || state === 'calling');
   try {
     render(ctx, state, (now - since) / 1000, looking ? { fdx: dir } : null);
