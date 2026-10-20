@@ -1,7 +1,7 @@
 {
   "name": "wisp",
   "productName": "Wisp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Pixel art desktop pet: a little ghost that lives on top of the focused window.",
   "main": "main.cjs",
   "author": "Kidd Shady",
